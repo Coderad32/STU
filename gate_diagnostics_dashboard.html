@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gate Diagnostics // System Console</title>
+<style>
+:root{
+  --bg:#03090e;--panel:#06131d;--cyan:#39d8ff;--blue:#168dff;--line:#2c9bc6;
+  --green:#69ff8a;--muted:#6d9db6;--white:#d8f7ff;--yellow:#c9d83e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#020609;color:var(--white);font-family:Consolas,"Courier New",monospace}
+body{padding:18px;display:grid;place-items:center}
+button{font:inherit;color:inherit;cursor:pointer}
+.console{
+ width:min(1600px,100%);min-height: min(930px, calc(100vh - 36px));position:relative;
+ padding:38px 15px 18px;background:
+ radial-gradient(ellipse at 50% 43%,rgba(13,77,110,.23),transparent 49%),
+ linear-gradient(120deg,rgba(10,40,57,.6),transparent 22%,transparent 80%,rgba(10,40,57,.4)),
+ #03090e;border:4px solid #07536a;clip-path:polygon(2% 0,18% 0,19% 1.5%,24% 1.5%,25% 0,76% 0,77% 1.5%,82% 1.5%,83% 0,98% 0,100% 3%,100% 97%,98% 100%,77% 100%,76% 98.5%,60% 98.5%,59% 100%,25% 100%,24% 98.5%,7% 98.5%,6% 100%,2% 100%,0 97%,0 4%);
+ filter:drop-shadow(0 0 20px #007fa033)
+}
+.console:before{content:"";position:absolute;inset:12px;border:1px solid #d8f7ff;clip-path:polygon(1% 0,10% 0,10.5% 1%,24% 1%,25% 0,89% 0,90% 1%,99% 1%,100% 3%,100% 97%,99% 99%,1% 99%,0 97%,0 3%);pointer-events:none;opacity:.85}
+.topline{position:absolute;top:14px;left:25%;font-size:clamp(9px,1vw,13px);letter-spacing:2px;color:#62dfff;text-shadow:0 0 8px #00bfff}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 155px;gap:10px;height:100%}
+.main{min-width:0;display:flex;flex-direction:column;gap:10px}
+.hero{position:relative;min-height:565px;flex:1;overflow:hidden;border-bottom:3px solid #60d7ff;background-image:linear-gradient(rgba(28,116,157,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(28,116,157,.08) 1px,transparent 1px);background-size:20px 20px}
+.status{position:absolute;top:15px;left:18px;color:var(--cyan);font-size:13px;letter-spacing:2px}
+.status .dot{color:var(--yellow);margin-right:7px}
+.subsystem{position:absolute;top:60px;left:20px;color:#5599ff;font-size:13px;line-height:1.65;letter-spacing:1px}
+.readings{white-space:pre;display:block;color:#d2f4ff;font-size:11px;line-height:1.45;margin-top:6px}
+.callout{position:absolute;border:1px solid #188ed9;color:#55e5ff;padding:12px;background:linear-gradient(100deg,#03111ccc,#03111c66);font-size:11px;line-height:1.5;letter-spacing:.5px;box-shadow:inset 0 0 16px #006ca522}
+.callout.left{left:5%;bottom:12%;width:29%;min-width:210px;clip-path:polygon(0 30%,24% 0,100% 0,100% 100%,0 100%)}
+.callout.right{right:1%;top:51%;width:24%;min-width:190px}
+.callout small{color:#a3b62e}
+.macro{position:absolute;right:3%;top:5%;font-size:10px;color:#51dfff;letter-spacing:1px}
+.ring-wrap{position:absolute;left:50%;top:51%;width:min(43vw,540px);height:min(43vw,540px);max-height:78%;max-width:62%;transform:translate(-50%,-50%);display:grid;place-items:center}
+.ring{width:100%;height:100%;position:relative;border-radius:50%;border:3px solid #197fff;box-shadow:0 0 0 5px #061321,0 0 0 7px #237ec8,0 0 20px #087aff66,inset 0 0 18px #147bff55;animation:spin 65s linear infinite}
+.ring:before,.ring:after{content:"";position:absolute;inset:7%;border-radius:50%;border:2px solid #48baff;box-shadow:0 0 8px #168dff}
+.ring:after{inset:12%;border:1px dashed #2a8cc8;animation:spin 30s linear infinite reverse}
+.glyphs{position:absolute;inset:8%;border-radius:50%;border:20px solid transparent;border-top-color:#0e2d44;border-bottom-color:#12394a;box-shadow:inset 0 0 0 2px #2d96dd}
+.glyphs:before{content:"";position:absolute;inset:-18px;border-radius:50%;background:repeating-conic-gradient(from 0deg,transparent 0deg 4deg,#65ff9a 4.3deg 5deg,transparent 5.3deg 9deg);mask:radial-gradient(circle,transparent 62%,#000 63% 69%,transparent 70%);opacity:.9}
+.inner{position:absolute;inset:18%;border-radius:50%;border:2px solid #234d66;box-shadow:inset 0 0 35px #000,0 0 12px #07131a;background:radial-gradient(circle,#010609 0 63%,#07131d 100%);display:grid;place-items:center;text-align:center}
+.inner:before{content:"";position:absolute;inset:5%;border-radius:50%;border:1px solid #142e3c}
+.coretext{font-size:clamp(8px,.7vw,11px);line-height:1.9;letter-spacing:1px;color:#a6efff;z-index:1}
+.coretext .inactive{position:absolute;left:12%;top:18%;transform:rotate(-72deg);color:#d5ffff;font-size:10px}
+.notch{position:absolute;width:22px;height:36px;border:2px solid #d1f5ff;background:#071c2a;box-shadow:0 0 9px #168dff;clip-path:polygon(50% 0,100% 65%,50% 100%,0 65%)}
+.n1{top:-7px;left:49%}.n2{bottom:-7px;left:49%;transform:rotate(180deg)}.n3{left:-7px;top:49%;transform:rotate(-90deg)}.n4{right:-7px;top:49%;transform:rotate(90deg)}
+.orbit-label{position:absolute;right:2%;top:20%;width:24%;color:#8ddfff;font-size:10px;line-height:1.8;text-align:center}
+.mini-graph{position:absolute;right:2%;bottom:22%;width:24%;height:70px;border:1px solid #1675a5;background:repeating-linear-gradient(90deg,transparent 0 5px,#15405755 5px 6px)}
+.mini-graph:before{content:"";position:absolute;inset:18px 8px;background:repeating-linear-gradient(90deg,#46d9ff 0 2px,transparent 2px 5px);clip-path:polygon(0 60%,5% 10%,10% 80%,15% 40%,20% 60%,25% 0,30% 80%,35% 20%,40% 70%,45% 30%,50% 90%,55% 15%,60% 60%,65% 5%,70% 70%,75% 30%,80% 85%,85% 10%,90% 55%,95% 25%,100% 65%)}
+.graph-label{position:absolute;right:2%;bottom:34%;font-size:9px;color:#79dfff}
+.bottom-data{height:210px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;padding:8px 12px 0;overflow:hidden;background:#020609;border-top:1px solid #1d6687}
+.data-block{font-size:10px;color:#b8dce8;line-height:1.55;min-width:0}
+.data-block h4{margin:4px 0 6px;color:#b3c83d;font-size:11px;font-weight:400;letter-spacing:1px}
+.data-block pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;color:#a6c8d5}
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}
+.pill{border-radius:12px;background:#007d9b;padding:3px 10px;color:white;min-width:60px;text-align:center}
+.sequence{height:28px;display:flex;overflow:hidden;border:1px solid #75eaff;background:#06202c}
+.sequence span{flex:1;text-align:center;padding:5px 2px;border-right:1px solid #58cde9;font-size:10px;letter-spacing:1px;white-space:nowrap}
+.sidebar{border-left:3px solid #50cfff;padding-left:7px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.sidebtn{width:100%;border:1px solid #4f9eb5;background:linear-gradient(90deg,#0b2636,#16445a);padding:6px 3px;font-size:11px;letter-spacing:1px;text-align:center;min-height:26px;transition:.15s}
+.sidebtn:hover,.sidebtn.active{background:#087ea0;box-shadow:0 0 10px #00baff66}
+.sidebtn .lamp{display:inline-block;width:9px;height:9px;background:#a7c32a;border:1px solid #324c13;margin-right:8px}
+.sidegrid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.sidegrid .sidebtn{padding:5px 1px}
+.sideheading{color:#c9d840;font-size:11px;line-height:1.4;text-align:center;padding:5px 0}
+.side-readout{font-size:11px;line-height:1.6;text-align:center;color:#d8f7ff;padding:4px 0;border-bottom:1px solid #24475a}
+.side-readout strong{color:#d8e743;font-weight:400}
+.footerline{color:#48d9ff;font-size:10px;letter-spacing:1px;padding:5px 8px 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{50%{opacity:.35}}
+.dot{animation:blink 1.4s infinite}
+@media(max-width:900px){
+ body{padding:5px}.console{padding:34px 10px 14px;clip-path:none;border-width:2px;min-height:100vh}
+ .layout{grid-template-columns:minmax(0,1fr) 125px}.hero{min-height:600px}
+ .ring-wrap{width:min(55vw,450px);height:min(55vw,450px);max-width:75%;top:48%}
+ .subsystem{font-size:11px}.callout.left{left:2%;bottom:3%;width:42%}.callout.right{right:1%;top:69%;width:38%}
+ .orbit-label,.mini-graph,.graph-label{display:none}.bottom-data{grid-template-columns:1fr 1fr;height:230px}.data-block:nth-child(3){display:none}
+}
+@media(max-width:580px){
+ .layout{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:repeat(3,1fr);border-left:0;border-top:2px solid var(--cyan);padding:6px 0 0}
+ .sideheading,.side-readout{display:none}.sidebtn{font-size:9px;padding:5px 1px}.sidegrid{display:contents}
+ .hero{min-height:660px}.ring-wrap{width:82vw;height:82vw;max-width:88%;top:42%}
+ .status{font-size:10px}.subsystem{top:47px;left:10px;font-size:9px}.readings{font-size:9px}
+ .callout.left{bottom:2%;left:1%;width:48%;min-width:0;font-size:9px;padding:7px}
+ .callout.right{top:auto;bottom:2%;right:1%;width:47%;min-width:0;font-size:9px;padding:7px}
+ .macro{right:2%;top:5%;font-size:8px}.bottom-data{grid-template-columns:1fr;height:170px}.data-block:nth-child(2){display:none}
+ .sequence span{font-size:8px;letter-spacing:0;padding:6px 1px}
+}
+</style>
+</head>
+<body>
+<div class="console">
+  <div class="topline">GATE DIAGNOSTICS//**MCK.008762346</div>
+  <div class="layout">
+    <main class="main">
+      <section class="hero">
+        <div class="status"><span class="dot">■</span> RUNNING DIAGNOSTICS//**</div>
+        <div class="subsystem">SUBSYSTEM ANALYSIS ALPHA V.4<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;VERIFYING ALPHA 2459K
+          <span class="readings">  3.645     8.543455   0.354
+  3.42      8.64       0.648
+  6.55      1.17455    0.745
+  0.0054    0.9203     0.65
+  0.48234   0.884      0.563
+  0.534     0.885      0.347</span>
+        </div>
+        <div class="macro">MACRO <span id="macroCode">00.37634560345</span></div>
+        <div class="ring-wrap" aria-label="Animated gate diagnostic ring">
+          <div class="ring" id="gateRing">
+            <div class="glyphs"></div>
+            <div class="inner">
+              <div class="coretext"><span class="inactive">INACTIVE 5.54 · V.872/X</span>
+                2049-1948 &nbsp; // V.34 X-V<br>
+                2058-3954 &nbsp; &gt;&gt;ALPHA 05<br><br>
+                <span id="rotationReadout">34503 &gt; ROT. 56 DEG.</span><br>
+                · P01 ·
+              </div>
+            </div>
+            <i class="notch n1"></i><i class="notch n2"></i><i class="notch n3"></i><i class="notch n4"></i>
+          </div>
+        </div>
+        <div class="orbit-label">VERIFYING DATA V.401<br>· ALPHA 1045 ·<br><br>ROT. SPEED = <span id="speedLabel">1.0043</span><br>POSITIVE ANALYSIS</div>
+        <div class="mini-graph"></div><div class="graph-label">ANALYSIS X1<br>ALPHA &gt; V.2</div>
+        <div class="callout left"><small>▪ 00.233.6800838-997<br>▪ 00.999812.LRT</small><br><br>
+          INITIALIZED// <span id="initTime">00.0289</span><br>
+          FREQUENCY 64.34KHZ // 00.3837<br>
+          ISOLATE FREQUENCY // COMPILE<br>
+          00.46XG.59 ...CONFIRMED // CHECK<br><br>
+          REPEAT //GO 00.284 // 00.2388<br><br>
+          000.3763456 // 0345<br>ACTIVE // 00.28000976 SC.004//
+        </div>
+        <div class="callout right">SUBSPACE PHASE ADJ. <span id="phase">0.5994</span><br>
+          <pre style="font:inherit;margin:8px 0 0;color:#c8f7ff">[ 00.23453.3453234.XDS
+  00.9945345768.RT
+  NC  00.523447.RT
+  NC  00.22345.RT
+  NC  00.52447.RT
+  NC  00.22345.RT</pre>
+        </div>
+      </section>
+      <div class="sequence" id="sequence"></div>
+      <section class="bottom-data">
+        <div class="data-block"><div>▪ MACRO MC.0039485*</div><h4>SUBSET D7 &nbsp;&nbsp; SUBSET G4</h4><pre>704.00       003.14
+005515       006400
+004.26       003.042
+4.26         3.425858
+5.0          6.2
+0.6548       1.654
+0.016        0.0265
+0.003974     0.264</pre></div>
+        <div class="data-block"><h4>SUBSET X2 &nbsp;&nbsp; SUBSET K5</h4><pre>006565       005383
+003.01       003.45
+3.01         3.45
+0.0446       0.345
+0.23         0.1454228
+0.4682       0.1453</pre>
+          <div class="pills"><span class="pill">NG8X · 6</span><span class="pill">00069</span></div>
+          <div class="pills"><span class="pill">DXRB · 3</span><span class="pill">00035</span></div>
+          <div class="pills"><span class="pill">RWFZ · 9</span><span class="pill">00059</span></div>
+        </div>
+        <div class="data-block"><h4>::PRIMARY &nbsp;&nbsp;&nbsp;&nbsp; ::SECONDARY</h4><pre>87460D192       001928746
+SUBSET H3       SUBSET J5
+005427          005516
+003.70          004.26
+3.70            4.26
+0.022034        0.6548
+0.119           0.016
+0.106           0.003974</pre></div>
+      </section>
+      <div class="footerline" id="systemMessage">SYSTEM READY // ALL DIAGNOSTIC ROUTINES NOMINAL</div>
+    </main>
+    <aside class="sidebar">
+      <button class="sidebtn"><span class="lamp"></span>GR MATRIX</button>
+      <button class="sidebtn"><span class="lamp"></span>GATE NFC</button>
+      <button class="sidebtn">TRACK · AGC</button>
+      <div class="sidegrid">
+        <button class="sidebtn">PK2</button><button class="sidebtn">TR4</button>
+        <button class="sidebtn">QD3</button><button class="sidebtn">RA6</button>
+        <button class="sidebtn">FT2</button><button class="sidebtn">KJ9</button>
+        <button class="sidebtn">RE7</button><button class="sidebtn">PT4</button>
+        <button class="sidebtn">Q80</button><button class="sidebtn">TK6</button>
+      </div>
+      <button class="sidebtn">SIMULATION A1</button><button class="sidebtn">SIMULATION A2</button>
+      <button class="sidebtn"><span class="lamp"></span>GATE NFC</button>
+      <button class="sidebtn">TRACK · XRT.3</button><button class="sidebtn">TRACK · VRT.4</button>
+      <div class="sideheading">PRIMARY GTF<br>SUBROUTINES</div>
+      <div class="side-readout"><strong>** 00.6584.EG</strong></div>
+      <div class="side-readout">CONFIRM: //<br><strong>** 00.3489.2X</strong></div>
+      <div class="sidegrid">
+        <button class="sidebtn">PK6</button><button class="sidebtn">LR6</button>
+        <button class="sidebtn">QT4</button><button class="sidebtn">RG2</button>
+        <button class="sidebtn">DG3</button><button class="sidebtn">JF9</button>
+        <button class="sidebtn">PJ6</button><button class="sidebtn">LT3</button>
+        <button class="sidebtn">QX5</button><button class="sidebtn">RG7</button>
+      </div>
+      <button class="sidebtn">EXTRAPOLATE</button>
+      <button class="sidebtn"><span class="lamp"></span>MATRIX-TK</button>
+      <button class="sidebtn"><span class="lamp"></span>GATE-TK</button>
+      <button class="sidebtn">TRACK · AGC</button><button class="sidebtn">TRACK · VTC</button>
+    </aside>
+  </div>
+</div>
+<script>
+const sequence = ['DG3','JF9','RG2','LR6','JF9','QT4','RG2','LR6','JF9','DG3','JF9','PK7','LR6','LR6','JF9','QT4','RG2'];
+const sequenceEl = document.getElementById('sequence');
+sequence.forEach(label => { const s=document.createElement('span'); s.textContent=label; sequenceEl.appendChild(s); });
+
+const messages = [
+  'SYSTEM READY // ALL DIAGNOSTIC ROUTINES NOMINAL',
+  'GATE NFC // HANDSHAKE VERIFIED // SIGNAL STABLE',
+  'MATRIX-TK // CALIBRATION PASS // NO ANOMALIES',
+  'SIMULATION MODE // SUBSYSTEM ALPHA ONLINE',
+  'EXTRAPOLATION COMPLETE // PHASE LOCK MAINTAINED',
+  'TRACK AGC // AUTOMATIC GAIN CONTROL ACTIVE'
+];
+document.querySelectorAll('.sidebtn').forEach((btn, index) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sidebtn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('systemMessage').textContent = '>> ' + btn.textContent.trim().replace(/\s+/g,' ') + ' // ' + messages[index % messages.length];
+    document.getElementById('macroCode').textContent = '00.' + Math.floor(100000 + Math.random()*899999) + '0345';
+    document.getElementById('phase').textContent = (0.5 + Math.random()*0.1).toFixed(4);
+    document.getElementById('rotationReadout').textContent = '34503 > ROT. ' + Math.floor(Math.random()*360) + ' DEG.';
+  });
+});
+
+let angle=0;
+setInterval(() => {
+  angle=(angle+1)%360;
+  document.getElementById('initTime').textContent='00.'+String(2800+angle).padStart(4,'0');
+  document.getElementById('speedLabel').textContent=(1.0043+Math.sin(angle/20)*.003).toFixed(4);
+},1000);
+</script>
+</body>
+</html>
